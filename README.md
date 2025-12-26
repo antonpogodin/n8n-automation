@@ -20,12 +20,12 @@ workflows/
 
 ### Email Management
 
-- **[InboxNinja](email-management/inbox-ninja.md)** - Intelligent email classification, receipt processing, and newsletter management
+- **[InboxNinja](workflows/email-management/inbox-ninja.md)** - Intelligent email classification, receipt processing, and newsletter management
 
 ### Vacation Requests
 
-- **[Add Vacations](vacation-requests/add-vacations.md)** - AI-powered vacation request processing from email
-- **[Add Vacation to GF](vacation-requests/add-vacation-to-gf.md)** - Glass Factory API integration for vacation management
+- **[Add Vacations](workflows/vacation-requests/add-vacations.md)** - AI-powered vacation request processing from email
+- **[Add Vacation to GF](workflows/vacation-requests/add-vacation-to-gf.md)** - Glass Factory API integration for vacation management
 
 ## Quick Start
 
@@ -54,4 +54,4 @@ Each workflow has its own detailed documentation file:
 
 ## License
 
-See the [LICENSE](../LICENSE) file in the repository root.
+See the [LICENSE](LICENSE) file in the repository root.
