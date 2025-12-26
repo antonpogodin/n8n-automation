@@ -1,0 +1,459 @@
+{
+  "name": "Add vacation to GF",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://cc.glassfactory.io/api/v2/vacations.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=user_id",
+              "value": "={{ $json.memberId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('Extract Cookie').first().json.sessionCookie }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bb086a0a-80c1-4ab3-b4cf-55d9056b82e2",
+      "name": "Get Vacations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1504,
+        208
+      ],
+      "alwaysOutputData": true,
+      "notes": "Retrieves vacation details by vacation ID. Vacation ID should be provided in Manual Input or GF_VACATION_ID env var"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Find Vacation by ID').first().json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1b9e1ae1-e396-4fb9-836a-597afff5559f",
+      "name": "Check if Vacation Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1152,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const vacations = $input.all();\n//const inputData = $('Prepare Vacation Data').first().json;\n//const targetVacationId = $('Prepare Vacation Data').first().json.vacation_id;\nconst targetVacationId = $('Called by Agent').first().json.vacation_id\n\nif (!targetVacationId) {\n  throw new Error('Vacation ID not provided.');\n}\n\n// Find vacation with matching ID\nconst vacation = vacations.find(v => v.json.id == targetVacationId);\n\nif (vacation) {\n  return {\n    json: {\n      found: true,\n      vacationId: vacation.json.id,\n      vacation: vacation.json\n    }\n  };\n} else {\n  return {\n    json: {\n      found: false,\n      vacationId: targetVacationId\n    }\n  };\n}"
+      },
+      "id": "3b5bfab7-2391-4db4-b4d7-4b597a783c2f",
+      "name": "Find Vacation by ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cc.glassfactory.io/api/v2/vacations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('Extract Cookie').first().json.sessionCookie }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"user_id\": {{ $('Find Member by Email').first().json.memberId }},\n    \"start_date\": \"{{ $('Called by Agent').first().json.start_date }}\",\n    \"end_date\": \"{{ $('Called by Agent').first().json.end_date }}\",\n    \"vacation_type\": \"{{ $('Called by Agent').first().json.vacation_type }}\"\n}",
+        "options": {}
+      },
+      "id": "579b94d5-23f7-48eb-81aa-249c56c87ede",
+      "name": "Create Vacation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -768,
+        464
+      ],
+      "alwaysOutputData": true,
+      "notes": "Creates a new vacation with the provided parameters"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://cc.glassfactory.io/api/v2/vacations/{{ $('Find Vacation by ID').first().json.vacationId }}.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $('Extract Cookie').first().json.sessionCookie }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b194f0d-b0af-469e-9f95-66ab772695dd",
+      "name": "Delete Vacation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -944,
+        192
+      ],
+      "notes": "Deletes the vacation by vacation ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find member by email\n//const inputData = $('Prepare Vacation Data').first().json;\n//const email = inputData.member_email; \nconst email = $('Called by Agent').first().json.member_email;\nconst members = $input.all();\n\nif (!email) {\n  throw new Error('Email not provided.');\n}\n\n// Find member with matching email\nconst member = members.find(m => m.json.email === email || m.json.email?.toLowerCase() === email.toLowerCase());\n\nif (!member) {\n  throw new Error(`Member with email ${email} not found`);\n}\n\nreturn {\n  json: {\n    memberId: member.json.id,\n    memberName: member.json.name,\n    memberEmail: member.json.email,\n    officeId: member.json.office_id\n  }\n};"
+      },
+      "id": "3df60504-03b1-41a3-877e-2384e7de5f0e",
+      "name": "Find Member by Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2080,
+        272
+      ],
+      "notes": "Finds member ID by email address. Email should be provided in input data or GF_MEMBER_EMAIL env var"
+    },
+    {
+      "parameters": {
+        "url": "https://cc.glassfactory.io/api/v2/members.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Cookie",
+              "value": "={{ $('Extract Cookie').item.json.sessionCookie }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8c296502-56db-4160-b076-9646ba028edd",
+      "name": "Get Members",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -2304,
+        272
+      ],
+      "alwaysOutputData": false,
+      "notes": "Retrieves list of all members from Glass Factory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $input.item.json.headers || {};\nlet setCookieArray = headers['set-cookie'] || headers['Set-Cookie'];\n\nif (!setCookieArray) {\n  const headerKeys = Object.keys(headers);\n  const cookieKey = headerKeys.find(k => k.toLowerCase() === 'set-cookie');\n  if (cookieKey) {\n    setCookieArray = headers[cookieKey];\n  }\n}\n\nif (!setCookieArray || !Array.isArray(setCookieArray)) {\n  throw new Error('set-cookie header not found or not an array');\n}\n\n// Find the _glass-factory_session cookie\nconst sessionCookie = setCookieArray.find(cookie => cookie.includes('_glass-factory_session='));\n\nif (!sessionCookie) {\n  throw new Error('_glass-factory_session cookie not found in set-cookie array');\n}\n\n// Extract just the cookie name and value (before first semicolon)\nconst cookieValue = sessionCookie.split(';')[0];\n\nreturn {\n  json: {\n    sessionCookie: cookieValue\n  }\n};"
+      },
+      "id": "8fcfc9fe-737f-4cd5-8da6-9199e98794fe",
+      "name": "Extract Cookie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2528,
+        272
+      ],
+      "notes": "Extracts the session cookie from authentication response"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cc.glassfactory.io/api/v1/session",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"user\": {\n    \"email\": \"your-email@example.com\",\n    \"password\": \"YOUR_PASSWORD\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "942a0846-5636-4c50-a49d-639f84792f92",
+      "name": "Authenticate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -2752,
+        272
+      ],
+      "notes": "Authenticates with Glass Factory API and stores the session cookie"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "59de69be-598a-470d-b9fa-2151b2a46a81",
+              "leftValue": "={{ $('Called by Agent').first().json.vacation_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1888,
+        272
+      ],
+      "id": "9fef5776-23eb-432b-bd35-54d1c2ff6053",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "member_email",
+              "type": "any"
+            },
+            {
+              "name": "start_date",
+              "type": "any"
+            },
+            {
+              "name": "end_date",
+              "type": "any"
+            },
+            {
+              "name": "vacation_type",
+              "type": "any"
+            },
+            {
+              "name": "vacation_id",
+              "type": "any"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -3184,
+        272
+      ],
+      "id": "f4e41dca-1edf-4388-951d-1b028495a33c",
+      "name": "Called by Agent",
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Vacations": {
+      "main": [
+        [
+          {
+            "node": "Find Vacation by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Vacation Found": {
+      "main": [
+        [
+          {
+            "node": "Delete Vacation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Vacation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Vacation by ID": {
+      "main": [
+        [
+          {
+            "node": "Check if Vacation Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Vacation": {
+      "main": [
+        [
+          {
+            "node": "Create Vacation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Member by Email": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Members": {
+      "main": [
+        [
+          {
+            "node": "Find Member by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Cookie": {
+      "main": [
+        [
+          {
+            "node": "Get Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authenticate": {
+      "main": [
+        [
+          {
+            "node": "Extract Cookie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Vacations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Vacation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Called by Agent": {
+      "main": [
+        [
+          {
+            "node": "Authenticate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
